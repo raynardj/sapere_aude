@@ -1,0 +1,27 @@
+{
+    "name": "Sapere AUDE",
+    "description" : "Reading assistant for bioinformatics",
+    "version": "1.0",
+    "manifest_version": 2,
+    "background":{
+        "scripts":["tools/background.js"],
+        "persistent":false
+    },
+    "browser_action": {
+        "default_popup": "sa_menu.html",
+        "default_icon": "sa.png"
+      },
+    "options_page":"options.html",
+    "permissions": [
+        "storage", "http://*/*", "https://*/*", "tabs", "devtools://*/*"
+      ],
+    "commands": {
+        "study_select": {
+          "suggested_key": {
+            "default": "Ctrl+Shift+1",
+            "mac": "Command+Shift+1"
+          },
+          "description": "Study the selected text"
+        }
+      }
+}
