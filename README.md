@@ -6,8 +6,10 @@
 ### Installation steps
 * If you are using chrome, go to [this configuration page](chrome://extensions/)
 * On the upper right corner, turn on "Developer mode"
+
 ![developer mode](imgs/install_01.png)
 * Click "Load unpacked" button
+
 ![Load unpacked](imgs/install_02.png)
 * Select this directory of codes as the root folder
 
