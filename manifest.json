@@ -13,7 +13,7 @@
       },
     "options_page":"options.html",
     "permissions": [
-        "storage", "http://*/*", "https://*/*", "tabs", "devtools://*/*"
+        "storage", "tabs", "http://*/*","https://*/*"
       ],
     "commands": {
         "study_select": {
