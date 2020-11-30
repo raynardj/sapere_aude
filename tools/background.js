@@ -55,11 +55,15 @@ var log_text=(doc)=>{
     return load_work_page
 }
 
-chrome.commands.onCommand.addListener(function(command) {
-    console.log('Command:', command);
+var select_text_launch = () =>{
     chrome.tabs.executeScript(details={file:"tools/collect_tab_text.js"},
     (tab)=>{
         var text = tab[0];
         load_config(log_text(text))
     })
+}
+
+chrome.commands.onCommand.addListener(function(command) {
+    console.log('Command:', command);
+    select_text_launch()
   });

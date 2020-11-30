@@ -9,8 +9,13 @@
     },
     "browser_action": {
         "default_popup": "sa_menu.html",
-        "default_icon": "sa.png"
+        "default_icon": "genomicare_log.png"
       },
+    "icons":{
+      "16":"genomicare_log.png",
+      "48":"genomicare_log.png",
+      "128":"genomicare_log.png"
+    },
     "options_page":"options.html",
     "permissions": [
         "storage", "tabs", "http://*/*","https://*/*"
