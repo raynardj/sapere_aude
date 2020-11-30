@@ -41,3 +41,5 @@ class ActivateSelection{
         }
     }
 }
+
+export {selected_text, ActivateSelection}

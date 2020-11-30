@@ -24,3 +24,4 @@ var load_config = (callback) =>{
     }
     )
 }
+export {load_config}

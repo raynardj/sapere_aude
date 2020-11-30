@@ -1,3 +1,7 @@
+import { gene_component } from "./tools/comp.js";
+import { load_config } from "./tools/load_config.js";
+import {ActivateSelection, selected_text} from "./tools/select.js";
+import {APIAsync, create_modal, clean_modal, ce, Tabs} from "./tools/hover_tip.js"
 
 var execute_code = (config) =>{
     var {ravenclaw, aws_lambda} = config
@@ -94,6 +98,8 @@ var execute_code = (config) =>{
             {target_id:"selected_original_text",
             content:text,
             label:"Text", is_active:true},
+            {target_id:"find_gene_in_text", 
+            label:"🧬 Gene"},
             {target_id:"find_drug_in_text",
             label:"💊 Drug",},
             {target_id:"find_disease_in_text",
@@ -112,6 +118,11 @@ var execute_code = (config) =>{
         
         var get_text_f = ()=>{return {text}};
         var api_find_mutation = new APIAsync("find_mutations_in_text");
+
+        var api_find_gene = new APIAsync("find_gene_in_text");
+        api_find_gene.assign_load(
+            ravenclaw.endPoint+"/nlp/find_gene",get_text_f,gene_component.render,
+        )
         
         api_find_mutation.assign_load(
             ravenclaw.endPoint+"/nlp/find_mutations",
