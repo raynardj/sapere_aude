@@ -1,7 +1,8 @@
-import { gene_component } from "./tools/comp.js";
+import { GeneListComponent, CollapseComponent } from "./tools/comp.js";
 import { load_config } from "./tools/load_config.js";
-import {ActivateSelection, selected_text} from "./tools/select.js";
-import {APIAsync, create_modal, clean_modal, ce, Tabs} from "./tools/hover_tip.js"
+import { ActivateSelection } from "./tools/select.js";
+import { APIAsync, create_modal, Tabs } from "./tools/hover_tip.js"
+import { pretty_json, render_list } from "./tools/easy_bs.js"
 
 var execute_code = (config) =>{
     var {ravenclaw, aws_lambda} = config
@@ -12,36 +13,6 @@ var execute_code = (config) =>{
                 "x-api-key":aws_lambda.api_key,
                 'Content-Type': 'application/json',
             }
-    }
-
-    var render_list=(l)=>{
-
-        var ul = ce("ul");
-        ul.className="list-group";
-        
-        for(var i in l){
-            var li = ce("li");
-            li.className="list-group-item";
-            $(li).html(l[i]);
-            $(ul).append(li);
-        }
-        return ul
-    }
-
-    var pretty_json = (data) => {
-        /*
-        print json to pretty bs format
-        */
-        var table = ce("table")
-        table.className="table"
-        for(var k in data){
-            var row = ce("tr")
-            table.append(row)
-            var v = data[k];
-            var th = ce("th"); $(th).html(k);$(row).append(th)
-            var td = ce("td"); $(td).html(String(v));$(row).append(td)
-        }
-        return table
     }
 
     var get_drug_detail= async (drug_name, success, fail)=>{
@@ -108,8 +79,8 @@ var execute_code = (config) =>{
             label:"Mutation"},
             {target_id:"translate_en_to_cn", label:"to_Zh"}
             )
-    
-        var modal = create_modal(
+        var rv_url = ravenclaw.endPoint;
+        create_modal(
             {
                 title:"Text Helper",
                 dom_id:"selected_text_helper_modal",
@@ -117,24 +88,23 @@ var execute_code = (config) =>{
             })
         
         var get_text_f = ()=>{return {text}};
-        var api_find_mutation = new APIAsync("find_mutations_in_text");
-
-        var api_find_gene = new APIAsync("find_gene_in_text");
-        api_find_gene.assign_load(
-            ravenclaw.endPoint+"/nlp/find_gene",get_text_f,gene_component.render,
-        )
         
+        var api_find_gene = new APIAsync("find_gene_in_text");
+        var genelist_component=new GeneListComponent();
+        api_find_gene.assign_load(
+            rv_url+"/nlp/find_gene",get_text_f,genelist_component.render,
+        )
+
+        var api_find_mutation = new APIAsync("find_mutations_in_text");
         api_find_mutation.assign_load(
-            ravenclaw.endPoint+"/nlp/find_mutations",
-            get_text_f,
+            rv_url+"/nlp/find_mutations",get_text_f,
             function(data){
                 return data.matched_mutations.length?render_list(data.matched_mutations):"No mutation found"}
             )
 
         var api_find_drug = new APIAsync("find_drug_in_text");
         api_find_drug.assign_load(
-            ravenclaw.endPoint+"/nlp/drug",
-            get_text_f,
+            rv_url+"/nlp/drug",get_text_f,
             function(data){
                 return data.drugs.length?render_item_list(
                     data.drugs, get_drug_detail, "drug"):"No drug found"}
@@ -142,7 +112,7 @@ var execute_code = (config) =>{
 
         var api_find_disease = new APIAsync("find_disease_in_text");
         api_find_disease.assign_load(
-            ravenclaw.endPoint+"/nlp/find_disease",
+            rv_url+"/nlp/find_disease",
             get_text_f,
             function(data){
                 return data.diseases.length?render_item_list(
@@ -152,7 +122,7 @@ var execute_code = (config) =>{
 
         var api_translate = new APIAsync("translate_en_to_cn");
         api_translate.assign_load(
-            ravenclaw.endPoint+"/nlp/en_to_cn",
+            rv_url+"/nlp/en_to_cn",
             get_text_f,
             (data)=>{
                 return data.translation?data.translation:"Translation API failed"
@@ -199,3 +169,5 @@ var execute_code = (config) =>{
 $(document).ready(function(){
     load_config(execute_code)
 })
+
+window.CollapseComponent = CollapseComponent

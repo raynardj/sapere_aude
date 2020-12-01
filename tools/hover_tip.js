@@ -1,4 +1,5 @@
-const ce = (dom_name) => document.createElement(dom_name)
+import {ce, dom_to_text} from "./easy_bs.js";
+import {Component, ModalComponent} from "./comp.js"
 
 var clean_modal=(dom_id)=>{
     /*
@@ -14,52 +15,22 @@ var clean_modal=(dom_id)=>{
     }
 }
 
-var create_modal=(data)=>{
-    /*
-    Templating a modal component
-    */
-    var {title, dom_id, body} = data
-    
-    clean_modal(dom_id)
-    var modal = ce("div");
-    Object.assign(
-        modal,
-        {id:dom_id, className:"modal fade", tabindex:"-1", role:"dialog"}
-        );
+var create_modal = (data)=>{
+    clean_modal(data.dom_id);
+    var modal_comp = new ModalComponent();
 
-    var modal_str =  `
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">${title}</h5>
-          <button type="button" id="${dom_id}_close" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body" id="#ht_selection_modal_body">
-          ${body}
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-        </div>
-      </div>
-    </div>`
-    $(modal).html(modal_str)
-    $("body").append(modal)
-    $(modal).modal("show")
-    return modal
+    modal_comp.render(data);
+    var modal = modal_comp.dom;
+
+    $("body").append(modal);
+    $(modal).modal("show");
 }
-
 
 class Tabs{
     constructor(...tabs){
-        this.ul = ce("ul")
-        this.ul.className="nav nav-tabs"
+        this.ul = ce("ul", {className:"nav nav-tabs"})
         this.ul.role="tablist"
-        this.contents = ce("div")
-        Object.assign(
-            this.contents,
-            {className:"tab-content", id:"selected_text_tab-content"})
+        this.contents = ce("div", {className:"tab-content", id:"selected_text_tab-content"})
         for(var i in tabs){
             var {target_id, label, is_active, content} = tabs[i]
             this.new_tab(target_id, label, is_active,content)
@@ -68,10 +39,8 @@ class Tabs{
 
     new_tab(target_id, label, is_active, content){
         // create nav-item dom
-        var li = ce("li");
-        li.className="nav-item";
-        var a = ce("a");
-        a.className="nav-link"
+        var li = ce("li", {className:"nav-item"});
+        var a = ce("a", {className:"nav-link"}, );
         var aria_selected=false
         if(is_active){a.className+=" active"; aria_selected=true}
         $(a).html(label);
@@ -85,13 +54,11 @@ class Tabs{
         $(li).html(a);
         $(this.ul).append(li);
         // create content dom
-        var content_dom = ce("div");
-        $(content_dom).attr(
-            {
-                id:target_id,
-                role:"tabpanel",
-                "aria-labelledby":`${target_id}-tab`
-            })
+        var content_dom = ce("div",{id:target_id}, {
+            role:"tabpanel",
+            "aria-labelledby":`${target_id}-tab`
+        });
+
         if(is_active){
             content_dom.className="tab-pane fade show active"
         }else{
@@ -105,10 +72,7 @@ class Tabs{
         $(this.contents).append(content_dom)
     }
     everything(){
-        var wrap = ce("div")
-        $(wrap).append(this.ul)
-        $(wrap).append(this.contents)
-        return wrap.innerHTML
+        return dom_to_text(this.ul, this.contents)
     }
 }
 
@@ -117,8 +81,9 @@ class APIAsync{
         this.target_id=target_id
         $(`#${target_id}`).html(this.empty_page())
     }
-    assign_load(endPoint, get_data_callback, data_callback){
+    async assign_load(endPoint, get_data_callback, data_callback){
         var target_id=this.target_id
+        var api = this;
         $(this.load_btn).click(async function(){
             await fetch(endPoint,
                 {
@@ -130,33 +95,31 @@ class APIAsync{
                 })
             .then(res=>res.json())
             .then(data=>{
-                $(`#${target_id}_content`).html(data_callback(data))
+                $(api.content_div).html(data_callback(data))
             })
             .catch(err=>{
                 console.log(err)
-                $(`#${target_id}_content`).html(err)
+                $(api.content_div).html(err)
             })
         })
     }
     empty_page(){
         var sub=ce("div")
-        var controls = ce("div")
-        controls.className="row pl-3 pr-3 pt-3 pb-3"
+        var controls = ce("div", {className:"pl-3 pr-3 pt-3 pb-3"})
         sub.append(controls)
 
-        var btn_group = ce("div")
-        btn_group.className="btn-group"
+        var btn_group = ce(
+            "div",
+            {className:"btn-group"})
         controls.append(btn_group)
 
-        var load_btn = ce("button")
-        load_btn.className="btn btn-primary"
+        var load_btn = ce("button", {className:"btn btn-primary", innerText:"Load"})
         btn_group.append(load_btn)
 
-        var content_div = ce("div")
-        content_div.id=`${this.target_id}_content`
+        var content_div = ce("div", {id:`${this.target_id}_content`, className:"container"})
+        this.content_div = content_div
         sub.append(content_div)
         this.load_btn = load_btn
-        this.load_btn.innerText="Load"
         return sub
     }
 }
