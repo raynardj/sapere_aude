@@ -17,6 +17,12 @@ class Component{
     callback = (dom, data) => {
         // default no event assigned to dom
     }
+    run_callbacks = (dom, data) =>{
+        for(var i in this.callbacks){
+            var cb = this.callbacks[i];
+            cb(dom, data);
+        }
+    }
 }
 
 class CollapseComponent extends Component{
@@ -102,7 +108,7 @@ class GeneListComponent extends Component{
     callback = (dom, d) => {
         for(var i in d.genes){
             var gene = d.genes[i];
-            var gene_component = new GeneComponent();
+            var gene_component = new GeneComponent({callbacks:this.callbacks});
             gene_component.render({gene, parent:dom})
         }
     }
@@ -122,36 +128,8 @@ class GeneComponent extends Component{
             ce("h5",{},{},gene)
             )
         }
-    callback = async(dom, data) => {
-        var {gene,parent} = data;
-        load_config((config)=>{
-
-            var json_options = {
-                method:"POST",
-                headers: {
-                        "x-api-key":config.aws_lambda.api_key,
-                        'Content-Type': 'application/json',
-                    }
-            }
-            var input_data = {gene, "detail-type":"get_gene_functions"}
-            fetch(
-                config.aws_lambda.endPoint, {
-                    ...json_options,
-                    body: JSON.stringify(input_data)
-                })
-                .then(res=>res.json())
-                .then((gfs) => {
-                    if(gfs.length>0)
-                    {
-                        var gene_function_component = new GeneFunctionComponent();
-                        $(dom).append(gene_function_component.render(gfs))
-                    }
-                    $(parent).append(dom)
-                })
-                .catch((e) => {
-                        console.log(e.stack)
-                    })
-        })
+    callback = (dom, data) => {
+        this.run_callbacks(dom, data)
     }
 }
 
@@ -176,4 +154,68 @@ class GeneFunctionComponent extends Component{
     }
 }
 
-export {Component, GeneListComponent, GeneComponent, CollapseComponent, ModalComponent}
+class DiseaseListComponent extends Component{
+    constructor(properties={}){
+        super(properties)
+    }
+    html = (d)=>{
+        if(d.diseases.length==0){
+            return ce("div",{className:"disease_list_component"},{},"No Disease Found")
+        } else{
+            return ce("div",{className:"disease_list_component"})
+        }
+    }
+    callback = (dom, d) => {
+        for(var i in d.diseases){
+            var disease = d.diseases[i];
+            var disease_component = new DiseaseComponent({callbacks:this.callbacks});
+            disease_component.render({disease, parent:dom})
+        }
+    }
+}
+
+class DiseaseComponent extends Component{
+    constructor(properties={}){
+        super(properties)
+    }
+    html = (d) => {
+        var {disease} = d
+
+        return ce(
+            "div",
+            {className:'disease_item_frame',id:`disease_item_${disease}`},
+            {},
+            ce("h5",{},{},disease)
+            )
+        }
+    callback = (dom, data) => {
+        this.run_callbacks(dom, data)
+    }
+}
+
+class CollapsePrettyJSONComponent extends Component{
+    constructor(properties={}){
+        super(properties)
+        if(!this.dom_id){console.error("Has to be a dom_id for CollapsePrettyJSONComponent")}
+        if(!this.title){console.error("Has to be a title for CollapsePrettyJSONComponent")}
+    }
+    html = (d) =>{
+        return ce("div",{id:`${this.dom_id}-collapse-pretty-json`})
+    }
+    callback=(dom, d)=>{
+        var data = d[0];
+        var jlist = pretty_json(data);
+        var jcollapse = new CollapseComponent();
+        
+        $(dom).append(jcollapse.render({
+            button_text: this.title ,
+            body: jlist,
+            dom_id:`${this.dom_id}-collapse-component`
+        }))
+    }
+}
+
+export {Component, 
+    GeneListComponent, GeneFunctionComponent, GeneComponent, 
+    CollapseComponent, CollapsePrettyJSONComponent, ModalComponent, 
+    DiseaseListComponent, DiseaseComponent}

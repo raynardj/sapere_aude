@@ -1,5 +1,5 @@
-textarea {
-    height:300px;
+textarea,pre {
+    height:500px;
     overflow-x: auto;
     white-space: pre-wrap;
     white-space: -moz-pre-wrap;

@@ -1,4 +1,7 @@
-import { GeneListComponent, CollapseComponent } from "./tools/comp.js";
+import { GeneListComponent, GeneFunctionComponent, 
+    DiseaseListComponent, CollapseComponent ,
+    CollapsePrettyJSONComponent
+} from "./tools/comp.js";
 import { load_config } from "./tools/load_config.js";
 import { ActivateSelection } from "./tools/select.js";
 import { APIAsync, create_modal, Tabs } from "./tools/hover_tip.js"
@@ -15,6 +18,85 @@ var execute_code = (config) =>{
             }
     }
 
+    const get_gene_function = async(dom, data)=>{
+        var {gene,parent} = data;
+        load_config((config)=>{
+
+            var input_data = {gene, "detail-type":"get_gene_functions"}
+            fetch(
+                config.aws_lambda.endPoint, {
+                    ...json_options,
+                    body: JSON.stringify(input_data)
+                })
+                .then(res=>res.json())
+                .then((gfs) => {
+                    if(gfs.length>0)
+                    {
+                        var gene_function_component = new GeneFunctionComponent();
+                        $(dom).append(gene_function_component.render(gfs))
+                    }
+                    $(parent).append(dom)
+                })
+                .catch((e) => {
+                        console.log(e.stack)
+                    })
+        })
+    }
+
+    const get_disease_detail = async(dom, data) =>{
+        var { disease, parent } = data;
+        var name_cn = disease
+        load_config(async (config)=>{
+
+        var input_data = {name_cn, "detail-type":"ckb_get_disease"}
+
+        await fetch(
+            config.aws_lambda.endPoint, {
+                ...json_options,
+                body: JSON.stringify(input_data)
+            })
+            .then(res=>res.json())
+            .then((details) => {
+                if(details.length>0)
+                {
+                    var colla_pretty_component = new CollapsePrettyJSONComponent({
+                        title:`${disease} Detail`,
+                        dom_id:`desease-detail-${disease}`
+                    });
+                    $(dom).append(colla_pretty_component.render(details))
+                }
+                $(parent).append(dom)
+            })
+            .catch((e) => {console.log(e.stack)})
+        })
+    }
+
+
+    const get_trial_by_disease = async(dom, data) =>{
+        var { disease, parent } = data;
+        load_config(async (config)=>{
+            var input_data = {disease, "detail-type":"get_clinic_trial"};
+            await fetch(
+                config.aws_lambda.endPoint, {
+                    ...json_options,
+                    body: JSON.stringify(input_data)
+                })
+                .then(res=>res.json())
+                .then((details) => {
+                    console.log(details)
+                    if(details.length>0)
+                    {
+                        var colla_pretty_component = new CollapsePrettyJSONComponent({
+                            title:`${disease} Clinical Trials`,
+                            dom_id:`clinical-trials-${disease}`
+                        });
+                        $(dom).append(colla_pretty_component.render(details[0]))
+                    }
+                    $(parent).append(dom)
+                })
+                .catch((e) => {console.log(e.stack)})
+        })
+    }
     var get_drug_detail= async (drug_name, success, fail)=>{
         var input_data = {
             "detail-type": "ckb_get_drug",
@@ -23,19 +105,6 @@ var execute_code = (config) =>{
         await fetch(aws_lambda.endPoint,{
             ...json_options,
             body:JSON.stringify(input_data)
-        })
-        .then(res=>res.json()).then(success).catch(fail)
-    }
-
-    var get_disease_detail = async (disease_name, success, fail) =>{
-        var input_data = {
-            "detail-type": "ckb_get_disease",
-            "name_cn":disease_name
-        }
-
-        await fetch(aws_lambda.endPoint,{
-            ...json_options,
-            body:JSON.stringify(input_data),
         })
         .then(res=>res.json()).then(success).catch(fail)
     }
@@ -77,7 +146,8 @@ var execute_code = (config) =>{
             label:"🤧 Disease",},
             {target_id:"find_mutations_in_text",
             label:"Mutation"},
-            {target_id:"translate_en_to_cn", label:"to_Zh"}
+            {target_id:"translate_en_to_cn",
+            label:"to_Zh"}
             )
         var rv_url = ravenclaw.endPoint;
         create_modal(
@@ -90,7 +160,11 @@ var execute_code = (config) =>{
         var get_text_f = ()=>{return {text}};
         
         var api_find_gene = new APIAsync("find_gene_in_text");
-        var genelist_component=new GeneListComponent();
+
+        var genelist_component=new GeneListComponent({callbacks:
+            [get_gene_function,]
+        });
+
         api_find_gene.assign_load(
             rv_url+"/nlp/find_gene",get_text_f,genelist_component.render,
         )
@@ -109,14 +183,16 @@ var execute_code = (config) =>{
                 return data.drugs.length?render_item_list(
                     data.drugs, get_drug_detail, "drug"):"No drug found"}
             )
-
+        var diseaselist_component = new DiseaseListComponent({
+            callbacks:[
+                get_disease_detail,
+                get_trial_by_disease
+            ]
+        })
         var api_find_disease = new APIAsync("find_disease_in_text");
         api_find_disease.assign_load(
             rv_url+"/nlp/find_disease",
-            get_text_f,
-            function(data){
-                return data.diseases.length?render_item_list(
-                    data.diseases, get_disease_detail, "disease"):"No disease found"}
+            get_text_f,diseaselist_component.render
             )
         
 
