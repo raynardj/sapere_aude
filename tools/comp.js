@@ -1,7 +1,8 @@
-import {load_config} from "./load_config.js";
-import {pretty_json, ce,  dom_to_text} from "./easy_bs.js"
+import {pretty_json, ce,  dom_to_text, abbreviate_long_text} from "./easy_bs.js"
 
-const dom_parser = new DOMParser()
+const dom_parser = new DOMParser();
+
+const get_rand=()=> String(parseInt(Math.random()*20)) ;
 
 class Component{
     constructor(properties={}){
@@ -24,16 +25,26 @@ class Component{
         }
     }
 }
-
+/*
++++++++++++++++++++++++++++++++++++++++++
+Bootstrap structure
++++++++++++++++++++++++++++++++++++++++++
+*/ 
 class CollapseComponent extends Component{
-    constructor(properties={}){ super(properties)}
+    constructor(properties={}){ 
+        super(properties)
+        if(!properties.btn_theme){
+            this.btn_theme="primary"
+        }
+    }
     html = (d) => {
         var {dom_id, body, button_text} = d
+        this.card_body = ce("div",{id:`${dom_id}_body`,className:"card card-body"});
         var collapse = ce(
             "div",
             {className:"container"},{},
             ce("p",{},{},
-                ce("a",{className:"btn btn-primary"},
+                ce("a",{className:`btn btn-${this.btn_theme}`},
                     {"data-toggle":"collapse",
                     href:`#${dom_id}`,
                     role:"button",
@@ -41,7 +52,7 @@ class CollapseComponent extends Component{
                     "aria-controls":dom_id}, button_text)
                 ),
             ce("div",{className:"collapse",id:dom_id},{},
-                ce("div",{id:`${dom_id}_body`,className:"card card-body"}))
+            this.card_body)
             )
         return collapse
     }
@@ -94,6 +105,33 @@ class ModalComponent extends Component{
     }
 }
 
+class CollapsePrettyJSONComponent extends Component{
+    constructor(properties={}){
+        super(properties)
+        if(!this.dom_id){console.error("Has to be a dom_id for CollapsePrettyJSONComponent")}
+        if(!this.title){console.error("Has to be a title for CollapsePrettyJSONComponent")}
+        if(!properties.btn_theme){this.btn_theme="primary"}
+    }
+    html = (d) =>{
+        return ce("div",{id:`${this.dom_id}-collapse-pretty-json`})
+    }
+    callback=(dom, data)=>{
+        var jlist = pretty_json(data);
+        var jcollapse = new CollapseComponent({btn_theme:this.btn_theme});
+        
+        $(dom).append(jcollapse.render({
+            button_text: this.title ,
+            body: jlist,
+            dom_id:`${this.dom_id}-collapse-component`
+        }))
+    }
+}
+
+/*
++++++++++++++++++++++++++++++++++++++++++
+GENE
++++++++++++++++++++++++++++++++++++++++++
+*/ 
 class GeneListComponent extends Component{
     constructor(properties={}){
         super(properties)
@@ -153,7 +191,11 @@ class GeneFunctionComponent extends Component{
         }))
     }
 }
-
+/*
++++++++++++++++++++++++++++++++++++++++++
+Disease
++++++++++++++++++++++++++++++++++++++++++
+*/ 
 class DiseaseListComponent extends Component{
     constructor(properties={}){
         super(properties)
@@ -192,30 +234,131 @@ class DiseaseComponent extends Component{
         this.run_callbacks(dom, data)
     }
 }
-
-class CollapsePrettyJSONComponent extends Component{
+/*
++++++++++++++++++++++++++++++++++++++++++
+Drug
++++++++++++++++++++++++++++++++++++++++++
+*/ 
+class DrugListComponent extends Component{
     constructor(properties={}){
         super(properties)
-        if(!this.dom_id){console.error("Has to be a dom_id for CollapsePrettyJSONComponent")}
-        if(!this.title){console.error("Has to be a title for CollapsePrettyJSONComponent")}
     }
     html = (d) =>{
-        return ce("div",{id:`${this.dom_id}-collapse-pretty-json`})
+        if(d.drugs.length==0){
+            return ce("div",{className:"drug_list_component"},{},"No drug found")
+        } else{
+            return ce("div",{className:"drug_list_component"})
+        }
     }
-    callback=(dom, d)=>{
-        var data = d[0];
-        var jlist = pretty_json(data);
-        var jcollapse = new CollapseComponent();
-        
-        $(dom).append(jcollapse.render({
-            button_text: this.title ,
-            body: jlist,
-            dom_id:`${this.dom_id}-collapse-component`
-        }))
+    callback = (dom, d) =>{
+        for(var i in d.drugs){
+            var drug = d.drugs[i];
+            var drug_component = new DrugComponent({callbacks:this.callbacks});
+            drug_component.render({drug, parent:dom})
+        }
     }
 }
 
+class DrugComponent extends Component{
+    constructor(properties={}){
+        super(properties)
+    }
+    html = (d) =>{
+        var {drug} = d;
+        
+        return ce(
+            "div",
+            {className:'drug_item_frame', id:`drug_item_${drug}`},
+            {},
+            ce("h5", {}, {}, drug)
+        )
+    }
+    callback = (dom, data) =>{
+        this.run_callbacks(dom, data)
+    }
+}
+/*
++++++++++++++++++++++++++++++++++++++++++
+Clinical Trial
++++++++++++++++++++++++++++++++++++++++++
+*/ 
+
+class ClinicalTrialComponent extends Component{
+    constructor(properties={}){
+        super(properties)
+        if(properties.button_text){this.button_text=properties.button_text}
+        else{this.button_text="Clinical Trial"}
+    }
+    html=(data)=>{
+        var outer_colla = new CollapseComponent();
+        outer_colla.render({dom_id:`clinical_trial_${get_rand()}`, body:"", button_text:this.button_text})
+
+        for(var i in data){
+            var d=data[i];
+            var main_title=d.title_cn!=""?d.title_cn:d.title_en;
+            var is_dom = d.dm_or_in=="国内"?"🇨🇳":"🌎"
+            var clinicalal_data =  new CollapsePrettyJSONComponent(
+                {
+                    btn_theme:"secondary",
+                    title:`${
+                        abbreviate_long_text(main_title,30)
+                    },${abbreviate_long_text(d.drugs.join(),30)}(${is_dom}${d.code})`,
+                    dom_id:`clinical_trial_${d.code}_${i}`
+                });
+            var {code,disease_text, drugs_text,drugs,  phases, dm_or_in, location, gender, age, startdate, url} = d;
+            var original_link = ce(
+                "a", {className:"btn btn-secondary"},
+                {'href':url, target:"_blank"}, "Open Source Link"
+                )
+            $(outer_colla.card_body, phases, dm_or_in, url).append(
+                clinicalal_data.render({
+                    code, main_title,disease_text, drugs_text,drugs, phases, gender, age, 
+                    dm_or_in, location, startdate, original_link
+                })
+            )
+        }
+        return outer_colla.dom
+    }
+}
+
+class QAComponent extends Component{
+    constructor(properties){
+        super(properties)
+        if(!properties.callbacks){
+            console.error("has to load callbacks for this component")
+        }
+    }
+    html=(data)=>{
+        var {text} = data;
+        this.question_input = ce(
+            "input",{className:"form-control"}
+        )
+        this.btn = ce("button",{className:"btn btn-primary mt-5"},{}, "ask")
+        this.answer = ce("div",{className:"card card-body pt-5"})
+        var big_card = ce("div",{className:"container"},{},
+            ce("div",{className:"card card-body pb-5"},{}, 
+                ce("label",{className:"label"},{},"Context"),text),
+            ce("label",{className:"label"},{},"Question:"),
+            this.question_input, this.btn, ce("hr"),
+            ce("label",{className:"label"},{},"Answer:"),
+            this.answer
+        )
+        return big_card
+    }
+    callback=(dom, data)=>{
+        var qa_comp = this;
+        $(this.btn).click(function () {
+            data["question"] = qa_comp.question_input.value
+            data["answer_dom"] = qa_comp.answer
+            qa_comp.run_callbacks(dom, data)
+        })
+    }
+}
 export {Component, 
     GeneListComponent, GeneFunctionComponent, GeneComponent, 
     CollapseComponent, CollapsePrettyJSONComponent, ModalComponent, 
-    DiseaseListComponent, DiseaseComponent}
+    DiseaseListComponent, DiseaseComponent,
+    ClinicalTrialComponent,
+    DrugListComponent, DrugComponent,
+    QAComponent
+}
